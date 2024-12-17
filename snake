@@ -1,0 +1,328 @@
+import pygame
+import random
+import sys
+ 
+# Khởi tạo Pygame
+pygame.init()
+pygame.mixer.init()
+# Kích thước màn hình và các thông số cơ bản
+WIDTH, HEIGHT = 600, 400
+CELL_SIZE = 20
+FPS = 10
+ 
+# Màu sắc
+BLACK = (0, 0, 0)
+WHITE = (255, 255, 255)
+GREEN = (0, 255, 0)
+RED = (255, 0, 0)
+BLUE = (0, 0, 255)
+YELLOW = (255, 255, 0)
+BROWN = (139, 69, 19)
+ 
+# Khởi tạo màn hình
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Snake Game")
+# Tải nhạc nền
+pygame.mixer.music.load("nhacnen.mp3")
+pygame.mixer.music.set_volume(0.5)
+pygame.mixer.music.play(-1)
+# Khởi tạo clock
+clock = pygame.time.Clock()
+ 
+# Font chữ
+font = pygame.font.Font(None, 26)
+ 
+# Biến toàn cục
+selected_map = "Classic"
+selected_snake_color = GREEN
+selected_difficulty = "Medium"
+high_score = 0
+ 
+# Tải điểm cao từ file
+try:
+    with open("highscore.txt", "r") as file:
+        high_score = int(file.read())
+except:
+    high_score = 0
+ 
+# Tải hình ảnh quả táo và táo đặc biệt
+apple_image = pygame.image.load("tao.png")
+apple_image = pygame.transform.scale(apple_image, (CELL_SIZE, CELL_SIZE))
+special_apple_image = pygame.image.load("taovang.png")
+special_apple_image = pygame.transform.scale(special_apple_image, (CELL_SIZE, CELL_SIZE))
+# Hàm hiển thị hướng dẫn chơi
+def show_instructions():
+    instruction_running = True
+    while instruction_running:
+        screen.fill(BLACK)
+       
+        # Tiêu đề
+        title_text = font.render("Huong dan choi", True, WHITE)
+        screen.blit(title_text, (WIDTH // 2 - title_text.get_width() // 2, 50))
+       
+        # Nội dung hướng dẫn
+        instructions = [
+            "1. Dung cac phim mui ten de di chuyen con ran.",
+            "2. An tao de tang diem cua ban.",
+            "3. Tranh va cham tuong,chuong ngai vat va than cua ban.",
+            "4. Tao vang xuat hien va giup diem len nhanh hon.",
+            "5. An R de quay lai va Q de thoat game.",
+            "6. An mui ten de chon mau sac va Map,An phim S de chon toc do"
+            ]
+       
+        for i, line in enumerate(instructions):
+            instruction_text = font.render(line, True, WHITE)
+            screen.blit(instruction_text, (10, 100 + i * 40))
+       
+        back_text = font.render("An B de tro lai Menu", True, WHITE)
+        screen.blit(back_text, (WIDTH // 2 - back_text.get_width() // 2, HEIGHT -30))
+       
+        pygame.display.flip()
+       
+        # Xử lý sự kiện
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_b:  # Quay lại menu
+                    instruction_running = False
+# Hàm hiển thị menu
+def show_menu():
+    global selected_map, selected_snake_color, selected_difficulty
+    menu_running = True
+    map_options = ["Classic", "Obstacles", "Wide Map"]
+    snake_colors = {"xanh lá cây": GREEN, "xanh duong": BLUE, "vàng": YELLOW}
+    difficulty_levels = ["Easy", "Medium", "Hard"]
+ 
+    current_map = 0
+    current_snake = 0
+    current_difficulty = 1  # Mặc định là Medium
+ 
+    while menu_running:
+        screen.fill(BLACK)
+ 
+        # Hiển thị tiêu đề menu
+        title_text = font.render("Snake Game Menu", True, WHITE)
+        screen.blit(title_text, (WIDTH // 2 - title_text.get_width() // 2, 50))
+ 
+        # Hiển thị các tùy chọn
+        map_text = font.render(f"Map: {map_options[current_map]}", True, WHITE)
+        screen.blit(map_text, (WIDTH // 2 - map_text.get_width() // 2, 150))
+ 
+        snake_text = font.render(f"Snake: {list(snake_colors.keys())[current_snake]}", True,
+                                 list(snake_colors.values())[current_snake])
+        screen.blit(snake_text, (WIDTH // 2 - snake_text.get_width() // 2, 200))
+ 
+        difficulty_text = font.render(f"Difficulty: {difficulty_levels[current_difficulty]}", True, WHITE)
+        screen.blit(difficulty_text, (WIDTH // 2 - difficulty_text.get_width() // 2, 250))
+        instruction_text = font.render("An I de xem huong dan", True, WHITE)
+        screen.blit(instruction_text, (WIDTH // 2 - instruction_text.get_width() // 2, 350))
+ 
+        instruction_text = font.render("An Enter de choi", True, WHITE)
+        screen.blit(instruction_text, (WIDTH // 2 - instruction_text.get_width() // 2, 300))
+       
+        pygame.display.flip()
+ 
+        # Xử lý sự kiện
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_UP:
+                    current_map = (current_map - 1) % len(map_options)
+                elif event.key == pygame.K_DOWN:
+                    current_map = (current_map + 1) % len(map_options)
+                elif event.key == pygame.K_LEFT:
+                    current_snake = (current_snake - 1) % len(snake_colors)
+                elif event.key == pygame.K_RIGHT:
+                    current_snake = (current_snake + 1) % len(snake_colors)
+                elif event.key == pygame.K_w:
+                    current_difficulty = (current_difficulty - 1) % len(difficulty_levels)
+                elif event.key == pygame.K_s:
+                    current_difficulty = (current_difficulty + 1) % len(difficulty_levels)
+                elif event.key == pygame.K_RETURN:
+                    selected_map = map_options[current_map]
+                    selected_snake_color = list(snake_colors.values())[current_snake]
+                    selected_difficulty = difficulty_levels[current_difficulty]
+                    menu_running = False
+                elif event.key == pygame.K_i:  # Mở hướng dẫn chơi
+                    show_instructions()
+ 
+# Tùy chỉnh bản đồ
+show_menu()
+if selected_map == "Wide Map":
+    WIDTH, HEIGHT = 800, 600
+    screen = pygame.display.set_mode((WIDTH, HEIGHT))
+ 
+# Rắn và Trái cây
+snake = [(100, 100), (90, 100), (80, 100)]
+snake_dir = "RIGHT"
+fruit_pos = (random.randint(0, (WIDTH // CELL_SIZE) - 1) * CELL_SIZE,
+             random.randint(0, (HEIGHT // CELL_SIZE) - 1) * CELL_SIZE)
+score = 0
+special_fruit_pos = None
+ 
+# Tạo chướng ngại vật
+def generate_obstacles():
+    obstacles = []
+    for _ in range(10):
+        x = random.randint(0, (WIDTH // CELL_SIZE) - 1) * CELL_SIZE
+        y = random.randint(0, (HEIGHT // CELL_SIZE) - 1) * CELL_SIZE
+        obstacles.append((x, y))
+    return obstacles
+ 
+obstacles = generate_obstacles() if selected_map == "Obstacles" else []
+ 
+# Hàm vẽ rắn
+def draw_snake(snake):
+    for segment in snake:
+        pygame.draw.rect(screen, selected_snake_color,
+                         pygame.Rect(segment[0], segment[1], CELL_SIZE, CELL_SIZE))
+ 
+# Hàm vẽ táo
+def draw_apple(position, special=False):
+    if special:
+        screen.blit(special_apple_image, (position[0], position[1]))
+    else:
+        screen.blit(apple_image, (position[0], position[1]))
+ 
+# Hàm kết thúc trò chơi
+# Hàm kết thúc trò chơi
+def game_over():
+    global high_score
+    if score > high_score:
+        high_score = score
+        with open("highscore.txt", "w") as file:
+            file.write(str(high_score))            
+   
+    while True:
+        screen.fill(BLACK)
+ 
+        # Hiển thị thông báo Game Over
+        game_over_text = font.render("Game Over!", True, WHITE)
+        screen.blit(game_over_text, (WIDTH // 2 - game_over_text.get_width() // 2, HEIGHT // 3))
+ 
+        score_text = font.render(f"Score: {score}", True, WHITE)
+        screen.blit(score_text, (WIDTH // 2 - score_text.get_width() // 2, HEIGHT // 3 + 50))
+ 
+        instruction_text = font.render("An R de tro lai va Q de thoat", True, WHITE)
+        screen.blit(instruction_text, (WIDTH // 2 - instruction_text.get_width() // 2, HEIGHT // 3 + 100))
+ 
+        pygame.display.flip()
+ 
+        # Xử lý sự kiện
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_r:  # Nhấn phím "R" để quay lại menu
+                    show_menu()
+                    main_game_loop()
+                elif event.key == pygame.K_q:  # Nhấn phím "Q" để thoát
+                    pygame.quit()
+                    sys.exit()
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_r:  # Nhấn phím "R" để quay lại menu
+                    show_menu()
+                    main_game_loop()
+                elif event.key == pygame.K_q:  # Nhấn phím "Q" để thoát
+                    pygame.quit()
+                    sys.exit()
+                   
+# Tùy chỉnh mức độ khó
+difficulty_levels = {"Easy": 8, "Medium": 12, "Hard": 16}
+FPS = difficulty_levels[selected_difficulty]
+# Hàm khởi tạo lại trò chơi
+def reset_game():
+    global snake, snake_dir, fruit_pos, score, special_fruit_pos, obstacles
+    snake = [(100, 100), (90, 100), (80, 100)]
+    snake_dir = "RIGHT"
+    fruit_pos = (random.randint(0, (WIDTH // CELL_SIZE) - 1) * CELL_SIZE,
+                 random.randint(0, (HEIGHT // CELL_SIZE) - 1) * CELL_SIZE)
+    score = 0
+    special_fruit_pos = None
+    obstacles = generate_obstacles() if selected_map == "Obstacles" else []
+# Vòng lặp chính
+def main_game_loop():
+    global snake, snake_dir, fruit_pos, score, obstacles, special_fruit_pos, high_score, FPS
+    reset_game()
+    FPS = difficulty_levels[selected_difficulty]  # Thiết lập FPS dựa vào mức khó
+   
+    while True:
+        screen.fill(BLACK)
+ 
+        # Xử lý sự kiện
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_UP and snake_dir != "DOWN":
+                    snake_dir = "UP"
+                elif event.key == pygame.K_DOWN and snake_dir != "UP":
+                    snake_dir = "DOWN"
+                elif event.key == pygame.K_LEFT and snake_dir != "RIGHT":
+                    snake_dir = "LEFT"
+                elif event.key == pygame.K_RIGHT and snake_dir != "LEFT":
+                    snake_dir = "RIGHT"
+ 
+        # Di chuyển rắn
+        head_x, head_y = snake[0]
+        if snake_dir == "UP":
+            head_y -= CELL_SIZE
+        elif snake_dir == "DOWN":
+            head_y += CELL_SIZE
+        elif snake_dir == "LEFT":
+            head_x -= CELL_SIZE
+        elif snake_dir == "RIGHT":
+            head_x += CELL_SIZE
+ 
+        # Thêm đầu mới
+        new_head = (head_x, head_y)
+        snake = [new_head] + snake[:-1]
+ 
+        # Kiểm tra va chạm
+        if (head_x < 0 or head_x >= WIDTH or head_y < 0 or head_y >= HEIGHT or new_head in snake[1:] or new_head in obstacles):
+            game_over()
+ 
+        # Rắn ăn trái cây
+        if new_head == fruit_pos:
+            snake.append(snake[-1])
+            fruit_pos = (random.randint(0, (WIDTH // CELL_SIZE) - 1) * CELL_SIZE,
+                         random.randint(0, (HEIGHT // CELL_SIZE) - 1) * CELL_SIZE)
+            score += 1
+ 
+            # Sinh trái cây đặc biệt
+            if score % 5 == 0:
+                special_fruit_pos = (random.randint(0, (WIDTH // CELL_SIZE) - 1) * CELL_SIZE,
+                                      random.randint(0, (HEIGHT // CELL_SIZE) - 1) * CELL_SIZE)
+ 
+        # Rắn ăn trái cây đặc biệt
+        if special_fruit_pos and new_head == special_fruit_pos:
+            score += 5
+            special_fruit_pos = None
+ 
+        # Vẽ màn chơi
+        draw_snake(snake)
+        draw_apple(fruit_pos)
+        if special_fruit_pos:
+            draw_apple(special_fruit_pos, special=True)
+ 
+        if selected_map == "Obstacles":
+            for obs in obstacles:
+                pygame.draw.rect(screen, WHITE, pygame.Rect(obs[0], obs[1], CELL_SIZE, CELL_SIZE))
+ 
+        # Hiển thị điểm số
+        score_text = font.render(f"Score: {score}  High Score: {high_score}", True, WHITE)
+        screen.blit(score_text, (10, 10))
+ 
+        # Cập nhật màn hình
+        pygame.display.flip()
+        clock.tick(FPS)
+ 
+# Bắt đầu từ menu chính
+show_menu()
+main_game_loop()
